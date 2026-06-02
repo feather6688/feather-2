@@ -1,0 +1,19 @@
+{
+  "name": "douyin-live-ops-analyzer",
+  "version": "2.0.0",
+  "description": "抖音直播运营智能决策分析系统 — 前端",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "echarts": "^5.5.1",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "vite": "^5.4.21"
+  }
+}

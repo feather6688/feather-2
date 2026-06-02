@@ -1,0 +1,38 @@
+# ===== Python =====
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+*.egg
+venv/
+env/
+.venv/
+
+# ===== Node.js =====
+node_modules/
+frontend/dist/
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== 操作系统 =====
+.DS_Store
+Thumbs.db
+
+# ===== 敏感文件 =====
+.env
+*.log
+
+# ===== 日志 =====
+logs/
+
+# ===== 临时文件 =====
+*.tmp
+*.bak
+*.cache

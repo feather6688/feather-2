@@ -1,0 +1,12 @@
+# ============================================
+# 抖音直播运营智能决策分析系统 - Python 依赖
+# ============================================
+# 安装: pip install -r requirements.txt
+# ============================================
+
+fastapi>=0.115.0        # Web 框架：REST API + WebSocket
+uvicorn>=0.34.0         # ASGI 服务器：运行 FastAPI
+DrissionPage>=4.1.0     # 浏览器自动化：操控 Chrome/Edge 采集弹幕
+websockets>=14.0        # WebSocket 协议支持
+jieba>=0.42             # 中文分词：热词统计
+snownlp>=0.12.3         # 中文情感分析：基于 SnowNLP 的情绪分类
