@@ -176,6 +176,26 @@ class WarningService:
 
     # ========== v3.0 负面关键词扫描 ==========
 
+    @staticmethod
+    def _is_false_positive(text: str, keyword: str) -> bool:
+        """检查关键词是否为误判（在正向语境中）"""
+        # "好不好" 中的"不好"不是负面，是疑问句式
+        if keyword == "不好" and "好不好" in text:
+            return True
+        # "不卡" 不是负面
+        if keyword == "卡" and "不卡" in text:
+            return True
+        # "不贵" 不是负面
+        if keyword == "贵" and "不贵" in text:
+            return True
+        # "不差" / "不差啊" 不是负面
+        if keyword == "差" and "不差" in text:
+            return True
+        # "不烂" 不是负面
+        if keyword == "烂" and "不烂" in text:
+            return True
+        return False
+
     def scan_negative_keywords(self, text: str, user_name: str = "") -> None:
         """
         扫描弹幕文本中的负面关键词
@@ -187,6 +207,9 @@ class WarningService:
         now: float = time.time()
         for kw in NEGATIVE_KEYWORDS:
             if kw in text:
+                # 排除误判：关键词在正向语境中（如"好不好"中的"不好"）
+                if self._is_false_positive(text, kw):
+                    continue
                 self._keyword_hits[kw].append((now, text, user_name or ""))
                 break  # 一条弹幕只计一个关键词，避免重复
 
