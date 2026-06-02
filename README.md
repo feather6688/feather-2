@@ -71,22 +71,22 @@
 ---
 ## 📸 功能展示
 
-— 整体大屏
+1.整体大屏
 <img width="2557" height="2102" alt="image" src="https://github.com/user-attachments/assets/613e6f8f-74a0-4240-91f2-6953d994e0dd" />
 
-运营核心指标（满意度/热度/风险）
+2.运营核心指标（满意度/热度/风险）
 <img width="2540" height="316" alt="image" src="https://github.com/user-attachments/assets/2cec0fc5-5a6b-44ab-9821-3b85c2d3a909" />
 
-实时情绪 + 累计情绪分析
+3.实时情绪 + 累计情绪分析
 <img width="2536" height="705" alt="image" src="https://github.com/user-attachments/assets/4893b9d6-08bd-4a5e-a4f7-626c156af29c" />
 
-关注主题 TOP5 + 运营建议
+4.关注主题 TOP5 + 运营建议
 <img width="2540" height="289" alt="image" src="https://github.com/user-attachments/assets/390a471a-a4d6-4bc0-b5f3-9a94d88bcd73" />
 
-异常预警中心 hover 详情
+5.异常预警中心 hover 详情
 <img width="1275" height="270" alt="image" src="https://github.com/user-attachments/assets/e718cca9-e294-4bfc-a7a6-a0ef3ff16f26" />
 
-实时弹幕列表
+6.实时弹幕列表
 <img width="386" height="1210" alt="image" src="https://github.com/user-attachments/assets/db7fb277-4e83-4875-822d-bc38e80ac213" />
 
 ---
@@ -191,8 +191,8 @@
 ```json
 {
   "live_info": {
-    "anchor_name": "浮乱迷生",
-    "live_title": "今天给大家带来..."
+    "anchor_name": "（用户名）",
+    "live_title": "（弹幕内容）..."
   }
 }
 ```
