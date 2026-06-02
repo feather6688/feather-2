@@ -14,6 +14,7 @@
 
 ## 📖 项目简介与背景
 <img width="2555" height="2164" alt="image" src="https://github.com/user-attachments/assets/e2410151-288c-46df-b132-9341a6081608" />
+
 直播电商已经成为当前互联网的重要商业模式。
 
 在一场直播过程中，观众会持续发送大量弹幕：
