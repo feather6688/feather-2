@@ -117,7 +117,13 @@ WarningCenter.vue v3.0 — 四等级预警中心
               v-for="(s, si) in kwTip.samples"
               :key="si"
               class="wc-kw-sample-item"
-            >「{{ s }}」</div>
+            >
+              <template v-if="s.user">
+                <span class="wc-kw-sample-user">{{ s.user }}</span>
+                <span class="wc-kw-sample-sep">：</span>
+              </template>
+              <span class="wc-kw-sample-text">「{{ s.text || s }}」</span>
+            </div>
           </div>
           <div v-else class="wc-kw-tip-no-data">暂无弹幕样本</div>
         </div>
@@ -366,12 +372,26 @@ function riskLabel(level) {
   font-size: 11px; color: #5a6680;
 }
 .wc-kw-sample-item {
-  font-size: 12px; color: #ffd43b; font-style: italic;
+  font-size: 12px;
   padding: 4px 8px;
   background: rgba(255,212,59,0.05);
   border-left: 2px solid rgba(255,212,59,0.25);
   border-radius: 0 4px 4px 0;
   word-break: break-all;
+  display: flex; align-items: flex-start; gap: 0;
+}
+.wc-kw-sample-user {
+  color: #64ffda;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.wc-kw-sample-sep {
+  color: #5a6680;
+  flex-shrink: 0;
+}
+.wc-kw-sample-text {
+  color: #ffd43b;
+  font-style: italic;
 }
 .wc-kw-tip-no-data {
   font-size: 12px; color: #5a6680; font-style: italic;

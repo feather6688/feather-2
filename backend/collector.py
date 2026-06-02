@@ -28,6 +28,12 @@ global_sentiment_stats = {"positive": 0, "neutral": 0, "negative": 0}
 # 实时情绪：只保留最近 100 条弹幕（滑动窗口，用于环形图）
 realtime_sentiment_queue = deque(maxlen=100)
 
+# ========== 直播间信息 ==========
+live_info = {
+    "anchor_name": "",
+    "live_title": ""
+}
+
 
 def calc_realtime_sentiment() -> dict:
     """统计最近 100 条弹幕的情绪分布"""
@@ -78,8 +84,134 @@ SYSTEM_MESSAGE_FILTER: list[str] = [
 # 旧名兼容
 SYS_KEYWORDS = SYSTEM_MESSAGE_FILTER
 
-# MutationObserver 注入脚本
+# MutationObserver 注入脚本（v3.1 — 新增直播间信息采集）
 MONITOR_JS = '''
+// ========== 直播间信息采集 ==========
+// 策略：TreeWalker 深度遍历 DOM > meta 标签 > document.title（带结果校验）
+
+// 判断文本是否为无效结果（太短、太泛、像系统词）
+function isValidText(text) {
+  if (!text || text.length < 2) return false;
+  var invalid = ['搜索', '抖音', '直播', '抖音直播', 'Douyin', 'TikTok',
+                 '推荐', '首页', '关注', '消息', '我', 'loading', 'Loading',
+                 'null', 'undefined', '未知主播', '未知标题'];
+  for (var i = 0; i < invalid.length; i++) {
+    if (text === invalid[i]) return false;
+  }
+  return true;
+}
+
+// TreeWalker 遍历页面 DOM 文本节点，找最长的合理文本作为标题
+function findTitleByWalk() {
+  var best = '';
+  // 优先在直播相关容器内遍历
+  var containers = document.querySelectorAll('[class*="live-room"], [class*="LiveRoom"], [class*="room"]');
+  if (containers.length === 0) {
+    containers = [document.body];  // 兜底：全页遍历
+  }
+  for (var c = 0; c < containers.length; c++) {
+    var walker = document.createTreeWalker(containers[c], NodeFilter.SHOW_TEXT, null, false);
+    var node;
+    while (node = walker.nextNode()) {
+      var t = (node.textContent || '').trim();
+      // 标题特征：4~120字符，不含过多数字/符号
+      if (t.length >= 4 && t.length < 120 && !/^[\\d\\s.、，。,！!？?：:（）()\\-]+$/.test(t)) {
+        if (t.length > best.length && isValidText(t)) {
+          best = t;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+function getAnchorName() {
+  // 1. TreeWalker 遍历 → 取分隔符前半
+  var text = findTitleByWalk();
+  if (text) {
+    var parts = text.split(/[-—–|｜·•]/);
+    if (parts.length >= 2) {
+      var first = parts[0].trim();
+      if (isValidText(first) && first.length >= 1 && first.length < 20) return first;
+    }
+  }
+
+  // 2. 专用选择器
+  var selList = [
+    '[class*="live-room"] [class*="account"]',
+    '[class*="LiveRoomInfo"] [class*="name"]',
+    '[class*="webcast"] [class*="anchor"]',
+    '[class*="author"]', '[class*="nick"]',
+  ];
+  for (var i = 0; i < selList.length; i++) {
+    var el = document.querySelector(selList[i]);
+    if (el && el.innerText) {
+      var t2 = el.innerText.trim();
+      if (isValidText(t2)) return t2;
+    }
+  }
+
+  // 3. document.title 兜底
+  var title = (document.title || '').replace(/\\s*[-—–|｜·•]?\\s*(抖音直播|抖音|Douyin)\\s*$/i, '').trim();
+  var parts2 = title.split(/[-—–|｜·•]/);
+  if (parts2.length >= 2) {
+    var first2 = parts2[0].trim();
+    if (isValidText(first2) && first2.length < 30) return first2;
+  }
+  return (isValidText(title) && title.length < 30) ? title : '未知主播';
+}
+
+function getLiveTitle() {
+  // 1. TreeWalker 遍历（首选 — 直接取页面可见的标题文本）
+  var text = findTitleByWalk();
+  if (text) {
+    // 如果包含分隔符，去掉主播名部分
+    var parts = text.split(/[-—–|｜·•]/);
+    if (parts.length >= 2) {
+      var rest = parts.slice(1).join('-').trim();
+      if (isValidText(rest) && rest.length >= 2) return rest;
+    }
+    if (isValidText(text)) return text;
+  }
+
+  // 2. meta 标签
+  var metaSelectors = [
+    'meta[property="og:title"]',
+    'meta[name="description"]',
+    'meta[property="og:description"]',
+  ];
+  for (var j = 0; j < metaSelectors.length; j++) {
+    var meta = document.querySelector(metaSelectors[j]);
+    if (meta && meta.content) {
+      var mc = meta.content.trim();
+      if (isValidText(mc) && mc.length >= 3 && mc.length < 120) return mc;
+    }
+  }
+
+  // 3. document.title 兜底
+  var title = (document.title || '').replace(/\\s*[-—–|｜·•]?\\s*(抖音直播|抖音|Douyin)\\s*$/i, '').trim();
+  var parts2 = title.split(/[-—–|｜·•]/);
+  if (parts2.length >= 2) {
+    var rest2 = parts2.slice(1).join('-').trim();
+    if (isValidText(rest2) && rest2.length >= 2) return rest2;
+  }
+  return (isValidText(title) && title.length >= 2) ? title : '未知标题';
+}
+
+// 延迟5秒后采集（页面异步渲染需要更长时间）
+setTimeout(function() {
+  try {
+    var anchor = getAnchorName();
+    var liveTitle = getLiveTitle();
+    console.log('ROOMINFO_DEBUG: document.title=' + (document.title || '(empty)') +
+                ' | anchor=' + anchor + ' | title=' + liveTitle);
+    console.log('ROOMINFO:' + JSON.stringify({ anchor_name: anchor, live_title: liveTitle }));
+  } catch(e) {
+    console.log('ROOMINFO:{"anchor_name":"采集失败","live_title":"采集失败"}');
+  }
+}, 5000);
+
+// ========== 弹幕监听 ==========
 const targetNode = document.querySelector('[class*="webcast-chatroom___list"]');
 if (!targetNode) { console.log('DANMU_SYS:target not found'); }
 
@@ -104,8 +236,18 @@ const callback = (mutationsList) => {
     if (mutation.type === "childList"){
       mutation.addedNodes.forEach((node)=>{
         if (node.nodeType === 1){
-          const text = extractFullText(node);
+          // 往上找到弹幕项容器 webcast-chatroom__item（用户名和内容都在里面）
+          var container = node;
+          while (container && container.nodeType === 1) {
+            var ccls = container.className || '';
+            if (ccls.indexOf('webcast-chatroom__item') >= 0) break;
+            container = container.parentElement;
+          }
+          var target = (container && container.nodeType === 1) ? container : node;
+          const raw = (target.innerText || target.textContent || '').trim();
+          const text = extractFullText(target);
           if (text.length > 0){
+            console.log('DANMU_RAW:' + raw.replace(/\\n/g, '\\\\n'));
             console.log('DANMU:' + text);
           }
         }
@@ -189,6 +331,16 @@ def parse_danmu(raw_text: str) -> dict | None:
         parts = text.split(':', 1)
         name = parts[0].strip().replace('\r', '').replace('\n', '')
         content = parts[1].strip().replace('\r', '').replace('\n', '')
+    elif '\n' in text:
+        # 抖音 DOM 中用户名和内容在不同 span，innerText 换行拼接
+        lines = text.strip().split('\n')
+        candidate_name = lines[0].strip()
+        # 用户名通常较短（2~20字符）
+        if len(candidate_name) >= 1 and len(candidate_name) <= 20:
+            name = candidate_name
+            content = ' '.join(l.strip() for l in lines[1:] if l.strip())
+        else:
+            content = text.replace('\r', '').replace('\n', '')
     else:
         content = text.replace('\r', '').replace('\n', '')
         # 没冒号且内容超长 → 系统公告
@@ -204,6 +356,14 @@ def parse_danmu(raw_text: str) -> dict | None:
         if kw in content:
             return None
 
+    # 清理用户名：去掉抖音 DOM 中包裹的引号、冒号和空格
+    if name:
+        # 去掉首尾的引号（中英文单双引号）+ 空格 + 冒号
+        # 去掉首尾空白 + 冒号 + 中英文单双引号 + 方头括号
+        name = name.strip(' \t\r\n：:"“”‘’\'「」『』')
+        name = name.strip(chr(0x2018))  # ‘
+        name = name.strip(chr(0x2019))  # ’
+        name = name.strip(chr(0x27))    # '
     if not name:
         name = "用户"
 
@@ -388,6 +548,29 @@ def run_danmu_monitor(live_url: str, danmu_queue: queue.Queue, browser_ref: list
                 continue
 
             data = msg.text
+
+            # ======== 调试日志 ========
+            if data.startswith('DANMU_RAW:'):
+                # 打印原始 innerText（含 \\n 标记），用于排查用户名丢失
+                print(f"[DANMU_RAW] {data[10:]}")
+                continue
+
+            if data.startswith('ROOMINFO_DEBUG:'):
+                print(f"[ROOMINFO_DEBUG] {data[16:]}")
+                continue
+
+            # ======== 直播间信息采集 ========
+            if data.startswith('ROOMINFO:'):
+                try:
+                    import json
+                    info = json.loads(data[9:])  # 去掉 "ROOMINFO:" 前缀
+                    live_info["anchor_name"] = info.get("anchor_name", "")
+                    live_info["live_title"] = info.get("live_title", "")
+                    print(f"[直播间信息] 主播: {live_info['anchor_name']} | 标题: {live_info['live_title']}")
+                except Exception as e:
+                    print(f"[直播间信息] JSON 解析失败: {e} | 原始数据: {data}")
+                continue
+
             if not data.startswith('DANMU:'):
                 continue
             data = data[6:]  # 去掉 "DANMU:" 前缀
@@ -426,9 +609,10 @@ def run_danmu_monitor(live_url: str, danmu_queue: queue.Queue, browser_ref: list
                 "business_words": business_words,            # 业务关键词归类
                 "warning_hits": warning_hits,                # 预警关键词命中
                 "sentiment": sentiment_label,                # 本条弹幕情绪（保持兼容）
-                "sentiment_score": sentiment_score,          # 【新增】SnowNLP 置信度 0~1
+                "sentiment_score": sentiment_score,          # SnowNLP 置信度 0~1
                 "realtime_sentiment": calc_realtime_sentiment(),  # 实时情绪分布
                 "global_sentiment": dict(global_sentiment_stats), # 累计情绪统计
+                "live_info": dict(live_info),                # 直播间信息
                 "timestamp": time.time(),                    # Unix 时间戳
                 "time": datetime.now().strftime("%H:%M:%S")
             }

@@ -20,7 +20,7 @@ App.vue — 抖音直播运营智能决策分析系统 根组件 v3.0
       <div class="header-left">
         <span class="logo-icon">&#9654;</span>
         <h1 class="title">抖音直播运营智能决策分析系统</h1>
-        <span class="version-tag">v3.0</span>
+        <span class="version-tag">v3.1</span>
       </div>
       <div class="header-right">
         <div class="status-badge" :class="{ connected: wsConnected }">
@@ -37,6 +37,15 @@ App.vue — 抖音直播运营智能决策分析系统 根组件 v3.0
         </div>
       </div>
     </header>
+
+    <!-- ========== v3.1 直播间信息栏 ========== -->
+    <div class="live-info-bar" v-if="liveInfo.anchor_name">
+      <div class="live-info-item">
+        <span class="live-info-icon">🎤</span>
+        <span class="live-info-label">主播</span>
+        <span class="live-info-value" :title="liveInfo.anchor_name">{{ liveInfo.anchor_name || '加载中...' }}</span>
+      </div>
+    </div>
 
     <!-- ========== 第一行：运营核心指标（满意度 / 热度 / 风险） ========== -->
     <section class="metrics-row">
@@ -178,6 +187,10 @@ const warningStatus = ref({               // v3.0 统一预警状态
 })
 const structuredAdvice = ref({            // v3.0 结构化建议
   topic: '', hotwords: [], advice: []
+})
+const liveInfo = reactive({               // v3.1 直播间信息
+  anchor_name: '',
+  live_title: ''
 })
 const sentimentTimeline = ref({           // 情绪趋势时间线
   timeline: [],
@@ -378,6 +391,15 @@ function processMetrics(msg) {
       advice: msg.structured_advice.advice || []
     }
   }
+  // v3.1 新增：直播间信息
+  if (msg.live_info) {
+    if (msg.live_info.anchor_name) {
+      liveInfo.anchor_name = msg.live_info.anchor_name
+    }
+    if (msg.live_info.live_title) {
+      liveInfo.live_title = msg.live_info.live_title
+    }
+  }
   // 更新情绪时间线（来自定期推送）
   if (msg.sentiment_timeline) {
     sentimentTimeline.value = msg.sentiment_timeline
@@ -432,6 +454,15 @@ function connectWebSocket() {
               count: msg.warning_status.count || 0,
               change_5min: msg.warning_status.change_5min || '0%',
               timestamp: msg.warning_status.timestamp || ''
+            }
+          }
+          // v3.1 新增：直播间信息
+          if (msg.live_info) {
+            if (msg.live_info.anchor_name) {
+              liveInfo.anchor_name = msg.live_info.anchor_name
+            }
+            if (msg.live_info.live_title) {
+              liveInfo.live_title = msg.live_info.live_title
             }
           }
           return
@@ -587,6 +618,74 @@ body {
   border-radius: 10px;
   padding: 12px;
   overflow: hidden;
+}
+
+/* ========== v3.1 直播间信息栏 ========== */
+.live-info-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 10px 20px;
+  background: rgba(20,30,60,0.5);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(100,255,218,0.12);
+  border-radius: 10px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.live-info-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+.live-info-title-item {
+  flex: 1;
+  min-width: 0;
+}
+.live-info-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.live-info-label {
+  font-size: 11px;
+  color: #5a6680;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+.live-info-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e0e6ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.live-info-title-text {
+  color: #64ffda;
+}
+.live-info-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(100,255,218,0.15);
+  margin: 0 20px;
+  flex-shrink: 0;
+}
+
+/* ========== 响应式：小屏时信息栏换行 ========== */
+@media (max-width: 768px) {
+  .live-info-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .live-info-divider {
+    display: none;
+  }
+  .live-info-value {
+    font-size: 12px;
+  }
 }
 
 /* ========== 第一行：运营核心指标 ========== */

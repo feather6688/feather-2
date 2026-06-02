@@ -170,6 +170,11 @@ latest_warning_status: Dict = {
 latest_structured_advice: Dict = {
     "topic": "等待数据分析...", "hotwords": [], "advice": [],
 }
+# v3.1 新增：直播间信息
+latest_live_info: Dict = {
+    "anchor_name": "",
+    "live_title": ""
+}
 
 # ========== FastAPI 生命周期 ==========
 @asynccontextmanager
@@ -185,7 +190,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="抖音直播运营智能决策分析系统",
     description="基于 DrissionPage + FastAPI + WebSocket + Vue3 + ECharts 的直播运营决策分析平台",
-    version="3.0.0",
+    version="3.1.0",
     lifespan=lifespan,
 )
 
@@ -203,13 +208,15 @@ async def root():
     return {
         "status": "运行中",
         "service": "抖音直播运营智能决策分析系统",
-        "version": "3.0.0",
+        "version": "3.1.0",
         "websocket": "ws://127.0.0.1:8000/ws",
         "connected_clients": len(connected_clients),
         "metrics": latest_metrics,
         # v3.0 新增
         "warning_status": latest_warning_status,
         "structured_advice": latest_structured_advice,
+        # v3.1 新增
+        "live_info": latest_live_info,
     }
 
 
@@ -224,6 +231,8 @@ async def get_metrics():
         # v3.0 新增：统一预警与建议 JSON
         "warning_status": latest_warning_status,
         "structured_advice": latest_structured_advice,
+        # v3.1 新增：直播间信息
+        "live_info": latest_live_info,
     }
 
 
@@ -353,6 +362,9 @@ async def broadcast_danmu():
             realtime_sent: Dict[str, int] = danmu_data.get("realtime_sentiment", {"positive": 0, "neutral": 0, "negative": 0})
             global_sent: Dict[str, int] = danmu_data.get("global_sentiment", {"positive": 0, "neutral": 0, "negative": 0})
 
+            # ---- v3.1 直播间信息 ----
+            live_info: Dict = danmu_data.get("live_info", {"anchor_name": "", "live_title": ""})
+
             # 同步 sentiment_service（供定期推送时使用）
             sentiment_service.global_stats = dict(global_sent)
             sentiment_service._realtime_queue.clear()
@@ -429,6 +441,11 @@ async def broadcast_danmu():
             latest_warning_status = warning_status
             latest_structured_advice = structured_advice
 
+            # v3.1 直播间信息缓存
+            global latest_live_info
+            if live_info.get("anchor_name") or live_info.get("live_title"):
+                latest_live_info.update(live_info)
+
             # ---- 7. 组装 WebSocket 消息（兼容 v1.0/v3.0 所有字段） ----
             message: dict = {
                 # === v1.0 原有字段（完全兼容） ===
@@ -452,6 +469,8 @@ async def broadcast_danmu():
                 # === v3.0 新增：统一预警与建议 JSON ===
                 "warning_status": warning_status,
                 "structured_advice": structured_advice,
+                # === v3.1 新增：直播间信息 ===
+                "live_info": dict(latest_live_info),
             }
 
             if new_warnings:
@@ -524,6 +543,8 @@ async def periodic_metrics_push():
                 "time": time.strftime("%H:%M:%S", time.localtime(now)),
                 # v3.0 新增
                 "warning_status": warning_status,
+                # v3.1 新增
+                "live_info": dict(latest_live_info),
             }
 
             disconnected: set[WebSocket] = set()

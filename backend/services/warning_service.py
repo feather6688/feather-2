@@ -100,8 +100,8 @@ class WarningService:
         self._level_text: str = "正常"
 
         # === v3.0 新增：负面关键词追踪 ===
-        # {keyword: [(timestamp, text), ...]}
-        self._keyword_hits: Dict[str, List[Tuple[float, str]]] = defaultdict(list)
+        # {keyword: [(timestamp, text, user_name), ...]}
+        self._keyword_hits: Dict[str, List[Tuple[float, str, str]]] = defaultdict(list)
 
     # ========== v3.0 负面率更新 ==========
 
@@ -176,17 +176,18 @@ class WarningService:
 
     # ========== v3.0 负面关键词扫描 ==========
 
-    def scan_negative_keywords(self, text: str) -> None:
+    def scan_negative_keywords(self, text: str, user_name: str = "") -> None:
         """
         扫描弹幕文本中的负面关键词
 
         参数:
             text: 弹幕文本内容
+            user_name: 发送弹幕的用户名
         """
         now: float = time.time()
         for kw in NEGATIVE_KEYWORDS:
             if kw in text:
-                self._keyword_hits[kw].append((now, text))
+                self._keyword_hits[kw].append((now, text, user_name or ""))
                 break  # 一条弹幕只计一个关键词，避免重复
 
     def get_warning_status(self) -> Dict:
@@ -212,14 +213,18 @@ class WarningService:
         five_min_ago: float = now - 300    # 最近5分钟
         ten_min_ago: float = now - 600     # 5~10分钟前
 
-        # 统计最近5分钟关键词
+        # 统计最近5分钟关键词（含用户名）
         keyword_stats: Dict[str, Dict] = {}
         for kw, hits in self._keyword_hits.items():
-            recent_hits = [(t, txt) for t, txt in hits if t >= five_min_ago]
-            older = [t for t, _ in hits if ten_min_ago <= t < five_min_ago]
+            recent_hits = [(t, txt, usr) for t, txt, usr in hits if t >= five_min_ago]
+            older = [t for t, _, _ in hits if ten_min_ago <= t < five_min_ago]
             if recent_hits:
-                # 取最近3条弹幕作为样本（优先最新的）
-                samples = [txt for _, txt in sorted(recent_hits, key=lambda x: x[0], reverse=True)[:3]]
+                # 取最近3条弹幕作为样本，含用户名和文本
+                sorted_hits = sorted(recent_hits, key=lambda x: x[0], reverse=True)[:3]
+                samples = [
+                    {"user": usr, "text": txt}
+                    for _, txt, usr in sorted_hits
+                ]
                 keyword_stats[kw] = {
                     "count": len(recent_hits),
                     "previous_count": len(older),
@@ -292,8 +297,8 @@ class WarningService:
                     }
                     break
 
-        # v3.0 负面关键词扫描
-        self.scan_negative_keywords(text)
+        # v3.0 负面关键词扫描（传入用户名）
+        self.scan_negative_keywords(text, user_name)
 
     def check_warnings(self) -> List[Dict]:
         """
