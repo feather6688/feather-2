@@ -1,4 +1,4 @@
-# 抖音直播运营智能决策分析系统
+# 🚀抖音直播运营智能决策分析系统
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688)](https://fastapi.tiangolo.com/)
@@ -6,16 +6,56 @@
 [![ECharts](https://img.shields.io/badge/ECharts-5.5+-AA344D)](https://echarts.apache.org/)
 [![WebSocket](https://img.shields.io/badge/WebSocket-Real--time-ff69b4)]()
 
-> v3.1 — 直播间信息采集 + 四等级预警 + 负面关键词分析 + 热词驱动智能建议  
+> v3.1 — 直播间信息采集 + 四等级预警 + 负面关键词分析 + 热词驱动智能建议
+> 基于 FastAPI + Vue3 构建的实时直播运营分析平台，通过采集抖音直播间弹幕数据，对用户情绪、关注热点、满意度、活跃用户及风险信息进行实时分析，并自动生成运营建议，辅助直播运营人员进行数据驱动决策。
 > 实时采集抖音直播间弹幕，WebSocket 毫秒级推送，运营指标智能分析大屏。
 
 ---
 
-## 📖 项目简介
+## 📖 项目简介与背景
 <img width="2555" height="2164" alt="image" src="https://github.com/user-attachments/assets/e2410151-288c-46df-b132-9341a6081608" />
+直播电商已经成为当前互联网的重要商业模式。
 
+在一场直播过程中，观众会持续发送大量弹幕：
+- 询问商品价格
+- 咨询产品功能
+- 表达购买意愿
+- 反馈使用体验
+- 提出投诉和质疑
 
-本系统面向**直播运营人员**，通过 DrissionPage 操控浏览器实时采集抖音直播间弹幕，经 SnowNLP 情感分析 + jieba 分词 + 业务关键词聚合后，通过 WebSocket 推送到 Vue3 前端大屏，以 ECharts 可视化展示核心运营指标。
+对于运营人员而言：
+面对每分钟数百条甚至数千条弹幕，很难实时判断：
+
+- 用户最关注什么
+- 用户是否满意
+- 当前直播效果如何
+- 是否出现负面舆情
+- 是否需要调整运营策略
+
+因此开发本项目：
+将直播间海量弹幕转化为可视化运营数据。
+
+---
+
+🎯 项目目标
+
+构建一个面向直播运营场景的实时分析系统，实现：
+
+✅ 实时弹幕采集
+
+✅ 用户情绪分析
+
+✅ 热点话题发现
+
+✅ 用户满意度评估
+
+✅ 风险预警
+
+✅ 自动运营建议生成
+
+帮助运营人员快速了解直播间状态。
+
+本系统面向**运营人员**，通过 DrissionPage 操控浏览器实时采集抖音直播间弹幕，经 SnowNLP 情感分析 + jieba 分词 + 业务关键词聚合后，通过 WebSocket 推送到 Vue3 前端大屏，以 ECharts 可视化展示核心运营指标。
 
 **核心能力：**
 
@@ -267,7 +307,7 @@ cd frontend && npm install && cd ..
 一条命令启动全部服务（后端启动时自动拉起前端 Vite）：
 
 ```bash
-# 在 VS Code 底部 TERMINAL（终端）面板输入，不要点右上角 ▶ Run 按钮
+# 在 VS Code 底部 TERMINAL（终端）面板输入，或者点右上角 ▶ Run 按钮后输入直播间地址
 python backend/main.py
 ```
 
@@ -379,15 +419,52 @@ python backend/main.py
 ```
 
 ---
+### 🔥后续优化方向
 
-## 🧩 API 接口
+数据库存储
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/` | 健康检查 + 系统状态 + v3.0 预警/建议数据 |
-| GET | `/api/metrics` | 运营指标 + 关注主题 + 预警 + 建议完整快照 |
+接入：
 
+- SQLite
+- MySQL
+- PostgreSQL
 
+支持历史数据查询。
+
+---
+
+多直播间监控
+
+同时分析多个直播间。
+
+---
+
+AI大模型增强
+
+接入：
+- DeepSeek
+- Qwen
+- GPT
+
+提升：
+
+- 情绪分析准确率
+- 建议生成质量
+
+---
+
+用户画像系统
+
+构建：
+
+- 兴趣标签
+- 活跃度模型
+- 粉丝画像
+
+---
+
+## 👨‍💻 作者
+feather6688
 
 ## 📄 License
 
