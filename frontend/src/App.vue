@@ -1,9 +1,9 @@
 <!--
 ============================================
-App.vue — 抖音直播运营智能决策分析系统 根组件 v2.0
+App.vue — 抖音直播运营智能决策分析系统 根组件 v3.0
 负责：WebSocket连接 + 数据处理 + 运营决策大屏布局
 
-升级变更（v1.0 → v2.0）：
+升级变更（v1.0 → v3.0）：
   - 新增运营指标面板（满意度 / 热度 / 风险等级）
   - 新增加关注主题 TOP5
   - 新增 运营建议面板
@@ -20,7 +20,7 @@ App.vue — 抖音直播运营智能决策分析系统 根组件 v2.0
       <div class="header-left">
         <span class="logo-icon">&#9654;</span>
         <h1 class="title">抖音直播运营智能决策分析系统</h1>
-        <span class="version-tag">v2.0</span>
+        <span class="version-tag">v3.0</span>
       </div>
       <div class="header-right">
         <div class="status-badge" :class="{ connected: wsConnected }">
@@ -57,7 +57,7 @@ App.vue — 抖音直播运营智能决策分析系统 根组件 v2.0
         <TopicTop5 :topics="topics" />
       </div>
       <div class="panel advice-panel-wrap">
-        <AdvicePanel :list="advice" />
+        <AdvicePanel :list="advice" :adviceJson="structuredAdvice" />
       </div>
     </section>
 
@@ -67,7 +67,7 @@ App.vue — 抖音直播运营智能决策分析系统 根组件 v2.0
         <EmotionTrend :timeline="sentimentTimeline" />
       </div>
       <div class="panel trend-warn-panel">
-        <WarningCenter :warnings="warnings" />
+        <WarningCenter :warnings="warnings" :wstatus="warningStatus" />
       </div>
     </section>
 
@@ -113,7 +113,7 @@ App.vue — 抖音直播运营智能决策分析系统 根组件 v2.0
 </template>
 
 <script setup>
-console.log('[App.vue v2.0] 组件开始加载...')
+console.log('[App.vue v3.0] 组件开始加载...')
 
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 
@@ -125,7 +125,7 @@ import UserRank from './components/UserRank.vue'
 import SentimentChart from './components/SentimentChart.vue'
 import RealtimeSentiment from './components/RealtimeSentiment.vue'
 
-// ===== v2.0 新增组件 =====
+// ===== v3.0 新增组件 =====
 import SatisfactionGauge from './components/SatisfactionGauge.vue'
 import HeatCard from './components/HeatCard.vue'
 import RiskCard from './components/RiskCard.vue'
@@ -134,7 +134,7 @@ import AdvicePanel from './components/AdvicePanel.vue'
 import WarningCenter from './components/WarningCenter.vue'
 import EmotionTrend from './components/EmotionTrend.vue'
 
-console.log('[App.vue v2.0] 子组件导入完成（7个原有 + 7个新增 = 14个）')
+console.log('[App.vue v3.0] 子组件导入完成（7个原有 + 7个新增 = 14个）')
 
 // ============ WebSocket 状态 ============
 let ws = null
@@ -163,7 +163,7 @@ const MAX_SENTIMENT_BUCKETS = 20
 const realtimeSentiment = ref({ positive: 0, neutral: 0, negative: 0 })
 const globalSentiment = ref({ positive: 0, neutral: 0, negative: 0 })
 
-// ============ v2.0 新增运营数据状态 ============
+// ============ v3.0 新增运营数据状态 ============
 const metrics = ref({
   satisfaction: 50.0,
   heat_index: 0.0,
@@ -171,7 +171,14 @@ const metrics = ref({
 })
 const topics = ref([])                    // 关注主题 TOP5
 const warnings = ref([])                  // 预警列表
-const advice = ref([])                    // 运营建议
+const advice = ref([])                    // 运营建议（v3.0 字符串列表）
+const warningStatus = ref({               // v3.0 统一预警状态
+  level: '🟢', level_text: '正常', negative_rate: 0,
+  keywords: [], keywords_detail: [], count: 0, change_5min: '0%', timestamp: ''
+})
+const structuredAdvice = ref({            // v3.0 结构化建议
+  topic: '', hotwords: [], advice: []
+})
 const sentimentTimeline = ref({           // 情绪趋势时间线
   timeline: [],
   positive: [],
@@ -324,7 +331,7 @@ function processDanmu(danmu) {
   }
 }
 
-// ============ 处理 v2.0 运营指标数据 ============
+// ============ 处理 v3.0/v3.0 运营指标数据 ============
 function processMetrics(msg) {
   // 更新运营指标
   if (msg.metrics) {
@@ -340,7 +347,6 @@ function processMetrics(msg) {
   }
   // 更新预警
   if (msg.warnings) {
-    // 合并新预警到现有列表
     if (msg.new_warnings && msg.new_warnings.length > 0) {
       warnings.value = [...msg.warnings]
     } else {
@@ -350,6 +356,27 @@ function processMetrics(msg) {
   // 更新运营建议
   if (msg.advice) {
     advice.value = msg.advice
+  }
+  // v3.0 新增：统一预警状态
+  if (msg.warning_status) {
+    warningStatus.value = {
+      level: msg.warning_status.level || '🟢',
+      level_text: msg.warning_status.level_text || '正常',
+      negative_rate: msg.warning_status.negative_rate ?? 0,
+      keywords: msg.warning_status.keywords || [],
+      keywords_detail: msg.warning_status.keywords_detail || [],
+      count: msg.warning_status.count || 0,
+      change_5min: msg.warning_status.change_5min || '0%',
+      timestamp: msg.warning_status.timestamp || ''
+    }
+  }
+  // v3.0 新增：结构化建议
+  if (msg.structured_advice) {
+    structuredAdvice.value = {
+      topic: msg.structured_advice.topic || '',
+      hotwords: msg.structured_advice.hotwords || [],
+      advice: msg.structured_advice.advice || []
+    }
   }
   // 更新情绪时间线（来自定期推送）
   if (msg.sentiment_timeline) {
@@ -376,7 +403,7 @@ function connectWebSocket() {
       try {
         const msg = JSON.parse(event.data)
 
-        // === v2.0: 处理运营指标快照消息（定期推送） ===
+        // === v3.0/v3.0: 处理运营指标快照消息（定期推送） ===
         if (msg.type === 'metrics_snapshot') {
           if (msg.metrics) {
             metrics.value = {
@@ -394,6 +421,19 @@ function connectWebSocket() {
           if (msg.realtime_sentiment) {
             realtimeSentiment.value = msg.realtime_sentiment
           }
+          // v3.0 新增
+          if (msg.warning_status) {
+            warningStatus.value = {
+              level: msg.warning_status.level || '🟢',
+              level_text: msg.warning_status.level_text || '正常',
+              negative_rate: msg.warning_status.negative_rate ?? 0,
+              keywords: msg.warning_status.keywords || [],
+              keywords_detail: msg.warning_status.keywords_detail || [],
+              count: msg.warning_status.count || 0,
+              change_5min: msg.warning_status.change_5min || '0%',
+              timestamp: msg.warning_status.timestamp || ''
+            }
+          }
           return
         }
 
@@ -405,7 +445,7 @@ function connectWebSocket() {
           globalSentiment.value = msg.global_sentiment
         }
 
-        // === v2.0: 处理运营指标 ===
+        // === v3.0: 处理运营指标 ===
         processMetrics(msg)
 
         // 原有弹幕处理逻辑（保持 v1.0 行为）
@@ -439,7 +479,7 @@ function startHeartbeat() {
 
 // ============ 生命周期 ============
 onMounted(() => {
-  console.log('[App.vue v2.0] 组件已挂载')
+  console.log('[App.vue v3.0] 组件已挂载')
   initTrendData()
   initSentimentData()
   connectWebSocket()
@@ -452,7 +492,7 @@ onUnmounted(() => {
   if (elapsedTimer) { clearInterval(elapsedTimer) }
 })
 
-console.log('[App.vue v2.0] 组件初始化完成')
+console.log('[App.vue v3.0] 组件初始化完成')
 </script>
 
 <!-- 全局样式 -->

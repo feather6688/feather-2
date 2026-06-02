@@ -1,11 +1,11 @@
 # ============================================
-# 抖音直播运营智能决策分析系统 — 主程序 v2.0
+# 抖音直播运营智能决策分析系统 — 主程序 v3.0
 # ============================================
 # 运行方式：python backend/main.py
 #
 # 技术栈: DrissionPage + FastAPI + WebSocket + Vue3 + ECharts
 #
-# 升级变更（v1.0 → v2.0）：
+# 升级变更（v1.0 → v3.0）：
 #   - 新增服务模块拆分（services/）
 #   - 新增运营指标计算（满意度、热度、风险等级）
 #   - 新增业务关注主题 TOP5
@@ -162,6 +162,14 @@ latest_metrics: Dict = {
 latest_topics: List[Dict] = []
 latest_warnings: List[Dict] = []
 latest_advice: List[str] = []
+# v3.0 新增缓存
+latest_warning_status: Dict = {
+    "level": "🟢", "level_text": "正常", "negative_rate": 0.0,
+    "keywords": [], "count": 0, "change_5min": "0%", "timestamp": "",
+}
+latest_structured_advice: Dict = {
+    "topic": "等待数据分析...", "hotwords": [], "advice": [],
+}
 
 # ========== FastAPI 生命周期 ==========
 @asynccontextmanager
@@ -177,7 +185,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="抖音直播运营智能决策分析系统",
     description="基于 DrissionPage + FastAPI + WebSocket + Vue3 + ECharts 的直播运营决策分析平台",
-    version="2.0.0",
+    version="3.0.0",
     lifespan=lifespan,
 )
 
@@ -195,10 +203,13 @@ async def root():
     return {
         "status": "运行中",
         "service": "抖音直播运营智能决策分析系统",
-        "version": "2.0.0",
+        "version": "3.0.0",
         "websocket": "ws://127.0.0.1:8000/ws",
         "connected_clients": len(connected_clients),
         "metrics": latest_metrics,
+        # v3.0 新增
+        "warning_status": latest_warning_status,
+        "structured_advice": latest_structured_advice,
     }
 
 
@@ -210,6 +221,9 @@ async def get_metrics():
         "topics": latest_topics,
         "warnings": latest_warnings,
         "advice": latest_advice,
+        # v3.0 新增：统一预警与建议 JSON
+        "warning_status": latest_warning_status,
+        "structured_advice": latest_structured_advice,
     }
 
 
@@ -219,7 +233,7 @@ async def websocket_endpoint(websocket: WebSocket):
     """
     WebSocket 端点 — 实时推送运营分析数据
 
-    数据结构（v2.0 兼容升级）：
+    数据结构（v3.0 兼容升级）：
     {
         // === v1.0 原有字段（保持不变，保证旧功能正常） ===
         "type": "danmu",
@@ -231,9 +245,9 @@ async def websocket_endpoint(websocket: WebSocket):
         "global_sentiment": {"positive": N, "neutral": N, "negative": N},
         "time": "HH:MM:SS",
 
-        // === v2.0 新增字段 ===
+        // === v3.0 新增字段 ===
         "metrics": {
-            "satisfaction": 82.0,     // 满意度 0~100
+            "satisfaction": 83.0,     // 满意度 0~100
             "heat_index": 76.0,       // 热度指数 0~100
             "risk_level": "中",        // 风险等级 低/中/高
         },
@@ -316,7 +330,7 @@ async def broadcast_danmu():
     处理流程：
         1. 从队列取出原始弹幕数据（collector 已含情绪分析结果）
         2. 喂入各服务进行指标计算（满意度 / 热度 / 风险 / 主题 / 预警）
-        3. 组装完整的 WebSocket 消息（v1.0 兼容 + v2.0 扩展）
+        3. 组装完整的 WebSocket 消息（v1.0 兼容 + v3.0 扩展）
         4. 广播给所有连接的客户端
     """
     logger.info("[广播任务] 弹幕广播协程已启动（每 0.1 秒轮询一次）")
@@ -358,9 +372,16 @@ async def broadcast_danmu():
                 for topic_name, cnt in business_words.items():
                     metrics_service._business_topic_counts[topic_name] += cnt
 
-            # ---- 3. 喂入预警服务 ----
+            # ---- 3. 喂入预警服务（v3.0 兼容 + v3.0 升级） ----
             user_name: str = danmu_data.get("name", "")
             warning_service.scan_danmu(content, user_name)
+
+            # ---- v3.0：更新负面率并获取预警状态 ----
+            neg_count: int = realtime_sent.get("negative", 0)
+            total_count: int = sum(realtime_sent.values()) or 1
+            neg_rate: float = neg_count / total_count
+            warning_service.update_negative_rate(neg_rate, neg_count, total_count)
+            warning_status: Dict = warning_service.get_warning_status()
 
             # ---- 4. 计算运营指标 ----
             satisfaction: float = metrics_service.calc_satisfaction(realtime_sent)
@@ -370,6 +391,8 @@ async def broadcast_danmu():
             new_warnings: List[Dict] = warning_service.check_warnings()
             active_warnings: List[Dict] = warning_service.get_active_warnings()
             topic_counts: Dict[str, int] = dict(metrics_service._business_topic_counts)
+
+            # ---- v3.0 指标驱动建议（向后兼容） ----
             advice: List[str] = advice_service.generate(
                 sentiment_stats=realtime_sent,
                 satisfaction=satisfaction,
@@ -377,6 +400,14 @@ async def broadcast_danmu():
                 risk_level=risk_level,
                 topic_counts=topic_counts,
                 warnings=active_warnings,
+            )
+
+            # ---- v3.0 热词驱动结构化建议 ----
+            danmu_words: List[str] = danmu_data.get("words", [])
+            warning_keywords: List[str] = warning_status.get("keywords", [])
+            structured_advice: Dict = advice_service.generate_structured(
+                hotwords=danmu_words,
+                extra_hotwords=warning_keywords,
             )
 
             # ---- 5. 更新情绪时间线 ----
@@ -393,7 +424,12 @@ async def broadcast_danmu():
             latest_warnings = active_warnings[:10]
             latest_advice = advice
 
-            # ---- 7. 组装 WebSocket 消息（兼容 v1.0 所有字段） ----
+            # v3.0 新增缓存
+            global latest_warning_status, latest_structured_advice
+            latest_warning_status = warning_status
+            latest_structured_advice = structured_advice
+
+            # ---- 7. 组装 WebSocket 消息（兼容 v1.0/v3.0 所有字段） ----
             message: dict = {
                 # === v1.0 原有字段（完全兼容） ===
                 "type": danmu_data.get("type", "danmu"),
@@ -404,7 +440,7 @@ async def broadcast_danmu():
                 "realtime_sentiment": realtime_sent,
                 "global_sentiment": global_sent,
                 "time": danmu_data.get("time", ""),
-                # === v2.0 新增字段 ===
+                # === v3.0 新增字段 ===
                 "metrics": {
                     "satisfaction": satisfaction,
                     "heat_index": heat_index,
@@ -413,6 +449,9 @@ async def broadcast_danmu():
                 "topics": topics,
                 "warnings": active_warnings[:10],
                 "advice": advice,
+                # === v3.0 新增：统一预警与建议 JSON ===
+                "warning_status": warning_status,
+                "structured_advice": structured_advice,
             }
 
             if new_warnings:
@@ -469,6 +508,9 @@ async def periodic_metrics_push():
                 "risk_level": risk_level,
             })
 
+            # v3.0 预警状态
+            warning_status: Dict = warning_service.get_warning_status()
+
             message: dict = {
                 "type": "metrics_snapshot",
                 "metrics": {
@@ -480,6 +522,8 @@ async def periodic_metrics_push():
                 "warnings": active_warnings[:10],
                 "realtime_sentiment": realtime_sent,
                 "time": time.strftime("%H:%M:%S", time.localtime(now)),
+                # v3.0 新增
+                "warning_status": warning_status,
             }
 
             disconnected: set[WebSocket] = set()
@@ -532,7 +576,7 @@ if __name__ == '__main__':
     print()
     print("  ⏳ 正在加载模型...")
     print("=" * 60)
-    print("    📊  抖音直播运营智能决策分析系统 v2.0")
+    print("    📊  抖音直播运营智能决策分析系统 v3.0")
     print("    🎯  技术栈: DrissionPage + FastAPI + WebSocket + Vue3 + ECharts")
     print("    📦  服务: 情绪分析 | 指标计算 | 预警检测 | 建议生成")
     print("=" * 60)
