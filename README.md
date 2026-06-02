@@ -12,7 +12,7 @@
 ---
 
 ## 📖 项目简介
-<img width="2550" height="2083" alt="image" src="https://github.com/user-attachments/assets/03c98684-24d1-479b-a869-a8a1bde627a0" />
+<img width="2557" height="2102" alt="image" src="https://github.com/user-attachments/assets/2844f521-1cd2-420c-8577-5525b72bbf26" />
 
 
 本系统面向**直播运营人员**，通过 DrissionPage 操控浏览器实时采集抖音直播间弹幕，经 SnowNLP 情感分析 + jieba 分词 + 业务关键词聚合后，通过 WebSocket 推送到 Vue3 前端大屏，以 ECharts 可视化展示核心运营指标。
@@ -334,7 +334,7 @@ python backend/main.py
 ## 📸 功能展示
 
 — 整体大屏
-<img width="2550" height="2083" alt="image" src="https://github.com/user-attachments/assets/a71c492f-e6e4-4eff-ad0f-35530786d486" />
+<img width="2557" height="2102" alt="image" src="https://github.com/user-attachments/assets/613e6f8f-74a0-4240-91f2-6953d994e0dd" />
 
 运营核心指标（满意度/热度/风险）
 <img width="2540" height="316" alt="image" src="https://github.com/user-attachments/assets/2cec0fc5-5a6b-44ab-9821-3b85c2d3a909" />
