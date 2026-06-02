@@ -12,7 +12,7 @@
 ---
 
 ## 📖 项目简介
-<img width="2557" height="2102" alt="image" src="https://github.com/user-attachments/assets/2844f521-1cd2-420c-8577-5525b72bbf26" />
+<img width="2555" height="2164" alt="image" src="https://github.com/user-attachments/assets/e2410151-288c-46df-b132-9341a6081608" />
 
 
 本系统面向**直播运营人员**，通过 DrissionPage 操控浏览器实时采集抖音直播间弹幕，经 SnowNLP 情感分析 + jieba 分词 + 业务关键词聚合后，通过 WebSocket 推送到 Vue3 前端大屏，以 ECharts 可视化展示核心运营指标。
@@ -68,6 +68,28 @@
      │  14 个独立组件，ECharts 实时渲染           │
      └──────────────────────────────────────────┘
 ```
+---
+## 📸 功能展示
+
+— 整体大屏
+<img width="2557" height="2102" alt="image" src="https://github.com/user-attachments/assets/613e6f8f-74a0-4240-91f2-6953d994e0dd" />
+
+运营核心指标（满意度/热度/风险）
+<img width="2540" height="316" alt="image" src="https://github.com/user-attachments/assets/2cec0fc5-5a6b-44ab-9821-3b85c2d3a909" />
+
+实时情绪 + 累计情绪分析
+<img width="2536" height="705" alt="image" src="https://github.com/user-attachments/assets/4893b9d6-08bd-4a5e-a4f7-626c156af29c" />
+
+关注主题 TOP5 + 运营建议
+<img width="2540" height="289" alt="image" src="https://github.com/user-attachments/assets/390a471a-a4d6-4bc0-b5f3-9a94d88bcd73" />
+
+异常预警中心 hover 详情
+<img width="1275" height="270" alt="image" src="https://github.com/user-attachments/assets/e718cca9-e294-4bfc-a7a6-a0ef3ff16f26" />
+
+实时弹幕列表
+<img width="386" height="1210" alt="image" src="https://github.com/user-attachments/assets/db7fb277-4e83-4875-822d-bc38e80ac213" />
+
+---
 
 | 层级 | 技术 | 用途 |
 |------|------|------|
@@ -334,6 +356,7 @@ python backend/main.py
 | `warning_status` | 🔥 四等级预警 + 负面关键词 + 弹幕样本 | **v3.0** |
 | `structured_advice` | 🔥 热词匹配场景 + 结构化建议 JSON | **v3.0** |
 
+
 ### 定期推送消息
 
 当没有新弹幕时，后端每 5 秒推送一次快照：
@@ -363,29 +386,7 @@ python backend/main.py
 | GET | `/` | 健康检查 + 系统状态 + v3.0 预警/建议数据 |
 | GET | `/api/metrics` | 运营指标 + 关注主题 + 预警 + 建议完整快照 |
 
----
 
-## 📸 功能展示
-
-— 整体大屏
-<img width="2557" height="2102" alt="image" src="https://github.com/user-attachments/assets/613e6f8f-74a0-4240-91f2-6953d994e0dd" />
-
-运营核心指标（满意度/热度/风险）
-<img width="2540" height="316" alt="image" src="https://github.com/user-attachments/assets/2cec0fc5-5a6b-44ab-9821-3b85c2d3a909" />
-
-实时情绪 + 累计情绪分析
-<img width="2536" height="705" alt="image" src="https://github.com/user-attachments/assets/4893b9d6-08bd-4a5e-a4f7-626c156af29c" />
-
-关注主题 TOP5 + 运营建议
-<img width="2540" height="289" alt="image" src="https://github.com/user-attachments/assets/390a471a-a4d6-4bc0-b5f3-9a94d88bcd73" />
-
-异常预警中心 hover 详情
-<img width="1275" height="270" alt="image" src="https://github.com/user-attachments/assets/e718cca9-e294-4bfc-a7a6-a0ef3ff16f26" />
-
-实时弹幕列表
-<img width="386" height="1210" alt="image" src="https://github.com/user-attachments/assets/db7fb277-4e83-4875-822d-bc38e80ac213" />
-
----
 
 ## 📄 License
 
